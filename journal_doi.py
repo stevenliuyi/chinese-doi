@@ -16,7 +16,7 @@ def get_issues(summary_url, journal_type):
     soup = BeautifulSoup(summary_page.content, 'html.parser')
 
     if journal_type == 1:
-        issues = soup.find_all('a', class_='J_WenZhang')
+        issues = soup.find_all('a', {'href': re.compile(r'\.\.\/volumn.*')})
     elif journal_type == 2:
         issues = soup.find_all('a', {'href': re.compile(r'.*issue_list.*')})
 
@@ -48,7 +48,10 @@ def format_issue(issue):
 
 def get_article(article_elem, issue_url, year, issue, journal_type):
     if journal_type == 1:
-        title = article_elem.find('a', class_='biaoti').text
+        title_elem = article_elem.find('a', class_='biaoti')
+        if title_elem is None:
+            title_elem = article_elem.find('p', class_='index_txt1').find('a')
+        title = title_elem.text
         #authors = format_authors(
         #    article_elem.find('dd', class_='zuozhe').text)
         link = article_elem.find('a',
@@ -81,7 +84,9 @@ def get_issue(issue_url, journal_type):
 
     # find year and issue number
     if journal_type == 1:
-        year_volume_issue = soup.find('div', class_='njq').text
+        year_volume_issue_elem = soup.find(
+            class_=re.compile(r'(njq|gkyllb_qi)'))
+        year_volume_issue = year_volume_issue_elem.text
         year = re.search(r'(\d+)年', year_volume_issue).group(1)
         #volume = re.search(r'第(\d+)卷', year_volume_issue).group(1)
         issue = re.search(r'第(\S*\d*)期', year_volume_issue).group(1)
@@ -89,13 +94,14 @@ def get_issue(issue_url, journal_type):
         year_volume_issue = soup.find(class_='STYLE2',
                                       text=re.compile(r'.*年第.*[卷巻].*期.*')).text
         year = re.search(r'(\d+)年', year_volume_issue).group(1)
-        issue = re.search(r'[卷巻]第(\S*\d*)期', year_volume_issue).group(1)
+        issue = re.search(r'[卷巻年]第([^卷]*\d*)期', year_volume_issue).group(1)
 
     issue = format_issue(issue)
 
     # find article elements
     if journal_type == 1:
-        article_elems = soup.find_all('div', class_='wenzhang')
+        article_elems = soup.find_all(
+            class_=re.compile(r'(wenzhang|index_tab_licont)'))
     elif journal_type == 2:
         article_elems = filter(
             lambda x: x.text != '摘要',
