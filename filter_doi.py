@@ -5,18 +5,17 @@ from shutil import copyfile
 
 
 def check(doi, status):
-    print(doi)
-
     doi_url = f'https://doi.org/{doi}'
-    status_code = web_request(doi_url).status_code
+    status_code = web_request(doi_url, allow_redirects=False).status_code
 
-    if status_code == 200:
+    if status_code == 302:
         return True
     elif status_code == 404:
         return False
     else:
         status['doi'].append(doi)
         status['status_code'].append(status_code)
+        print(status)
         return False
 
 
@@ -48,8 +47,9 @@ def main(journal_qid,
         status = {'doi': [], 'status_code': []}
 
         invalid_dois = []
-        for doi in df['doi']:
+        for idx, doi in enumerate(df['doi']):
             try:
+                print(f"{doi} ({idx+1}/{len(df['doi'])})")
                 if not check(doi, status): invalid_dois.append(doi)
             except:
                 print('Error encountered when validating DOIs!')

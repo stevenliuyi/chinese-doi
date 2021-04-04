@@ -139,6 +139,7 @@ cython_debug/
 
 # VS Code
 *.code-workspace
+.vscode/
 
 # Data files
 *.csv
