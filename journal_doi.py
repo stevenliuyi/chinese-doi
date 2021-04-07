@@ -62,9 +62,18 @@ def get_article(article_elem, issue_url, year, issue, journal_type):
         link = relative_path(issue_url, article_elem.get('href'))
         article_page = web_request(link)
         soup = BeautifulSoup(article_page.content, 'html.parser')
+
+        doi = ''
+        doi_elem = soup.find(text=re.compile(r'DOI:[\w\.\/\-]+'))
+        if doi_elem is not None:
+            doi_elem_text = doi_elem.text if hasattr(doi_elem,
+                                                     'text') else str(doi_elem)
+            doi = re.search(r'DOI:([\w\.\/\-]+)', doi_elem_text).group(1)
+
         doi_elem = soup.find('span', id='DOI')
-        doi = '' if doi_elem is None or doi_elem.find(
-            'a') is None else doi_elem.find('a').text
+        if doi_elem is not None:
+            if doi_elem.find('a') is not None:
+                doi = doi_elem.find('a').text
     elif journal_type == 3:
         link = relative_path(issue_url, article_elem.get('href'))
         article_page = web_request(link)
@@ -107,9 +116,10 @@ def get_issue(issue_url, journal_type):
             issue = re.search(r'\((\S*\d*)\)', year_volume_issue).group(1)
     elif journal_type == 2:
         year_volume_issue = soup.find(class_='STYLE2',
-                                      text=re.compile(r'年第.*[卷巻]?.*期')).text
-        year = re.search(r'(\d+)年', year_volume_issue).group(1)
-        issue = re.search(r'[卷巻年]第([^卷]*\d*)期', year_volume_issue).group(1)
+                                      text=re.compile(r'年?第.*[卷巻]?.*期')).text
+        year = re.search(r'(\d{4})[年第]', year_volume_issue).group(1)
+        issue = re.search(r'([卷巻年]|\d{4})第([^卷]*\d*)期',
+                          year_volume_issue).group(2)
 
     issue = format_issue(issue)
 
@@ -119,7 +129,7 @@ def get_issue(issue_url, journal_type):
             class_=re.compile(r'^(wenzhang|index_tab_licont|article)$'))
     elif journal_type == 2:
         article_elems = filter(
-            lambda x: x.text[:2] != '摘要',
+            lambda x: x.text[:2] != '摘要' and x.text[:4] != '[摘要]',
             soup.find_all('a', {'href': re.compile(r'view_abstract\.aspx')}))
     elif journal_type == 3:
         article_elems = soup.find_all('a', class_='abs')
